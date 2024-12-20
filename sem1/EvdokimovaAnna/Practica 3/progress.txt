@@ -1,4 +1,0 @@
-Money:130
-Food:2
-Woolly Rhino Horn:2:120
-Prehistoric Plant:2:50
