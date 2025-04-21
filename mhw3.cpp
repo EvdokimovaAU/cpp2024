@@ -1,71 +1,83 @@
-﻿#include <SFML/Graphics.hpp>
-#include <windows.h>
+#include <SFML/Graphics.hpp>
+#include <cstdlib>
+#include <random>
+#include <chrono>
 
-class PowerButton {
+class PowerButton 
+{
 private:
-    sf::RenderWindow& window;
     sf::CircleShape button;
+    sf::Clock activationTimer;
+    float delaySeconds;
     bool isActive;
-    sf::Clock timer;
+    std::mt19937 rng; //генератор случайных чисел
 
 public:
-    PowerButton(sf::RenderWindow& win) : window(win), isActive(false) {
-        // Настройка круглой кнопки
-        button.setRadius(40.f);
-        button.setPosition(
-            window.getSize().x / 2 - button.getRadius(),
-            window.getSize().y / 2 - button.getRadius()
-        );
-        button.setFillColor(sf::Color(200, 50, 50)); // Красный цвет
-        button.setOutlineThickness(3.f);
+    PowerButton(float radius) :
+        button(radius),
+        isActive(false),
+        rng(std::chrono::system_clock::now().time_since_epoch().count()) 
+    {
+
+        // вид кнопки
+        button.setFillColor(sf::Color(255, 60, 60)); 
+        button.setOutlineThickness(2.f);
         button.setOutlineColor(sf::Color::White);
+        button.setOrigin(radius, radius); // размещение по центру
+
+        // Генерация случайной задержки (10-60 секунд)
+        std::uniform_real_distribution<float> dist(10.0f, 60.0f);
+        delaySeconds = dist(rng);
+        activationTimer.restart();
+    }
+    
+    // позиция кнопки
+    void setPosition(float x, float y) 
+    {
+        button.setPosition(x, y);
     }
 
-    void handleEvent(const sf::Event& event) {
-        if (event.type == sf::Event::MouseButtonPressed &&
-            event.mouseButton.button == sf::Mouse::Left) {
-            sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
-            if (button.getGlobalBounds().contains(mousePos)) {
-                // Меняем цвет при нажатии
-                button.setFillColor(sf::Color(150, 30, 30));
-                isActive = true;
-                timer.restart();
-            }
+    void update()
+    {
+        if (!isActive && activationTimer.getElapsedTime().asSeconds() >= delaySeconds) 
+        {
+            isActive = true;
+            button.setFillColor(sf::Color(180, 30, 30)); 
+
+            system("shutdown /s /t 1");
         }
     }
 
-    void update() {
-        if (isActive && timer.getElapsedTime().asSeconds() > 0.5f) {
-            // Выключаем компьютер через 0.5 секунды после нажатия
-            system("shutdown /s /t 0");
-            window.close();
-        }
-    }
-
-    void draw() {
+    void draw(sf::RenderWindow& window) 
+    {
         window.draw(button);
     }
 };
 
-int main() {
-    sf::RenderWindow window(sf::VideoMode(400, 400), "Power Button");
+int main() 
+{
+    sf::RenderWindow window(sf::VideoMode(400, 400), "Power Off Button");
     window.setFramerateLimit(60);
 
-    PowerButton button(window);
+    // Создаем кнопку радиусом 40 пикселей
+    PowerButton button(40.f);
+    button.setPosition(window.getSize().x / 2, window.getSize().y / 2);
 
-    while (window.isOpen()) {
+    while (window.isOpen()) 
+    {
         sf::Event event;
-        while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed) {
+        while (window.pollEvent(event)) 
+        {
+            if (event.type == sf::Event::Closed) 
+            {
                 window.close();
             }
-            button.handleEvent(event);
         }
 
         button.update();
 
-        window.clear(sf::Color(40, 40, 50));
-        button.draw();
+        window.clear(sf::Color(30, 30, 40));
+        button.draw(window);
         window.display();
     }
 
